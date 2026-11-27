@@ -3,263 +3,357 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CloudMusic Player</title>
 <style>
-* {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ margin:0;background:#121212;color:white;
+ font-family:system-ui,sans-serif;
 }
-body {
-  margin: 0;
-  padding: 24px 16px;
-  background: #11131a;
-  color: #ffffff;
-  font-family: system-ui, sans-serif;
+main{max-width:480px;margin:auto;padding:24px}
+header{
+ display:flex;align-items:center;
+ justify-content:space-between;
 }
-.player {
-  max-width: 480px;
-  margin: auto;
+small,.muted{color:#a7a7a7}
+.cover{
+ aspect-ratio:1;max-width:320px;
+ margin:30px auto;
+ background:linear-gradient(135deg,#173b30,#427e64);
+ border-radius:20px;display:grid;place-items:center;
 }
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.disc{
+ width:82%;aspect-ratio:1;border-radius:50%;
+ background:repeating-radial-gradient(
+ circle,#151515 0px,#151515 4px,#303030 5px,#151515 7px);
+ display:grid;place-items:center;
+ animation:spin 15s linear infinite;
+ animation-play-state:paused;
 }
-.version {
-  color: #9295a5;
-  font-size: 12px;
+.disc.playing{animation-play-state:running}
+.center{
+ width:30%;aspect-ratio:1;border-radius:50%;
+ background:#1ed760;display:grid;place-items:center;
+ color:#111;font-size:32px;
 }
-.cover {
-  height: 220px;
-  margin: 24px 0;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #3730a3, #9333ea);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 100px;
+@keyframes spin{to{transform:rotate(360deg)}}
+h2{overflow-wrap:anywhere;margin-bottom:5px}
+button{
+ border:0;background:transparent;color:white;
+ cursor:pointer;font-size:22px;padding:12px;
 }
-h2 {
-  overflow-wrap: anywhere;
+button.active{color:#1ed760}
+.controls{
+ display:flex;align-items:center;
+ justify-content:space-between;margin:18px 0;
 }
-.subtitle {
-  color: #9295a5;
+#play{
+ width:64px;height:64px;border-radius:50%;
+ background:white;color:black;font-size:28px;
 }
-button, .import {
-  border: none;
-  border-radius: 14px;
-  padding: 14px;
-  background: #292d3b;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
+input[type=range]{
+ width:100%;accent-color:#1ed760;
 }
-.import {
-  display: block;
-  text-align: center;
-  background: #6366f1;
-  margin: 20px 0;
+.times{
+ display:flex;justify-content:space-between;
+ font-size:12px;color:#aaa;
 }
-input[type="file"] {
-  display: none;
+.import{
+ display:block;text-align:center;padding:15px;
+ background:#1ed760;color:#101010;
+ border-radius:30px;font-weight:bold;margin:20px 0;
 }
-audio {
-  width: 100%;
-  margin: 12px 0;
+#files{display:none}
+#search{
+ width:100%;padding:14px;border:0;
+ border-radius:12px;background:#262626;color:white;
+ font-size:16px;
 }
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 18px 0;
+.row{
+ display:flex;align-items:center;gap:10px;
+ padding:12px 0;border-bottom:1px solid #292929;
 }
-.controls button {
-  flex: 1;
+.song{
+ flex:1;min-width:0;overflow-wrap:anywhere;
+ cursor:pointer;
 }
-#playButton {
-  background: #6366f1;
-}
-#playlist {
-  padding: 0;
-  list-style: none;
-}
-#playlist li {
-  padding: 15px;
-  margin: 8px 0;
-  background: #20232e;
-  border-radius: 12px;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-}
-#playlist li.active {
-  background: #3730a3;
-}
-#status {
-  color: #b4b7c7;
-  font-size: 14px;
-}
-footer {
-  text-align: center;
-  color: #777b8c;
-  margin-top: 32px;
-  font-size: 12px;
+.row.current .song{color:#1ed760}
+.row button{font-size:18px;padding:8px}
+.volume{display:flex;align-items:center;gap:10px}
+footer{
+ text-align:center;color:#777;
+ font-size:12px;margin-top:30px;
 }
 </style>
 </head>
 <body>
+<main>
+<header>
+ <strong>CloudMusic</strong>
+ <small>v0.2.0</small>
+</header>
 
-<main class="player">
-  <header>
-    <h1>CloudMusic</h1>
-    <span class="version">v0.1.0</span>
-  </header>
+<div class="cover">
+ <div class="disc" id="disc">
+  <div class="center">♫</div>
+ </div>
+</div>
 
-  <div class="cover">♫</div>
+<h2 id="title">暂无音乐</h2>
+<p class="muted" id="status">导入音乐，开始聆听</p>
 
-  <h2 id="songName">暂无音乐</h2>
-  <p class="subtitle">本地音乐播放器</p>
+<audio id="audio"></audio>
 
-  <label class="import" for="files">
-    ＋ 导入本地音乐
-  </label>
+<input id="progress" type="range"
+ min="0" max="100" value="0" step="0.1">
 
-  <input id="files" type="file"
-    accept="audio/*,.mp3,.wav" multiple>
+<div class="times">
+ <span id="elapsed">0:00</span>
+ <span id="duration">0:00</span>
+</div>
 
-  <audio id="audio" controls></audio>
+<div class="controls">
+ <button id="shuffle" onclick="toggleShuffle()"
+ aria-label="随机播放">⇄</button>
+ <button onclick="previous()" aria-label="上一曲">⏮</button>
+ <button id="play" onclick="togglePlay()"
+ aria-label="播放或暂停">▶</button>
+ <button onclick="next()" aria-label="下一曲">⏭</button>
+ <button id="repeat" onclick="toggleRepeat()"
+ aria-label="循环模式">↻</button>
+</div>
 
-  <div class="controls">
-    <button onclick="previous()">上一曲</button>
-    <button id="playButton"
-      onclick="togglePlay()">播放</button>
-    <button onclick="next()">下一曲</button>
-  </div>
+<div class="volume">
+ <button id="mute" onclick="toggleMute()">🔊</button>
+ <input id="volume" type="range"
+ min="0" max="1" step="0.01" value="1">
+</div>
 
-  <h3>播放列表</h3>
-  <p id="status">尚未导入音乐</p>
-  <ul id="playlist"></ul>
+<label class="import" for="files">
+ ＋ 导入本地音乐
+</label>
+<input id="files" type="file"
+ accept="audio/*,.mp3,.wav,.m4a,.flac" multiple>
 
-  <footer>CloudMusic Player · GitHub Project</footer>
+<h3>我的曲库</h3>
+<input id="search" placeholder="搜索歌曲…">
+<p class="muted" id="count">共 0 首音乐</p>
+<div id="playlist"></div>
+
+<footer>CloudMusic Player · v0.2.0</footer>
 </main>
 
 <script>
-const audio = document.getElementById("audio");
-const files = document.getElementById("files");
-const playlist = document.getElementById("playlist");
-const songName = document.getElementById("songName");
-const playButton = document.getElementById("playButton");
-const status = document.getElementById("status");
-
+const $ = id => document.getElementById(id);
+const audio = $("audio");
 let songs = [];
 let current = -1;
-let currentURL = null;
+let url = null;
+let shuffle = false;
+let repeat = 0;
 
-// 导入本地音乐
-files.addEventListener("change", function () {
-  const selected = Array.from(files.files);
-  songs.push(...selected);
-  files.value = "";
+$("files").onchange = e => {
+ for(const file of e.target.files){
+  const exists = songs.some(s =>
+   s.file.name === file.name &&
+   s.file.size === file.size &&
+   s.file.lastModified === file.lastModified);
+  if(!exists) songs.push({file,favorite:false});
+ }
+ e.target.value = "";
+ if(current === -1 && songs.length)
+  loadSong(0,false);
+ render();
+};
 
-  if (current === -1 && songs.length > 0) {
-    loadSong(0, false);
-  }
+function render(){
+ $("playlist").replaceChildren();
+ $("count").textContent = `共 ${songs.length} 首音乐`;
+ const keyword = $("search").value.toLowerCase();
 
-  renderPlaylist();
-});
+ songs.forEach((s,i)=>{
+  if(!s.file.name.toLowerCase().includes(keyword)) return;
 
-// 更新播放列表
-function renderPlaylist() {
-  playlist.innerHTML = "";
-  status.textContent = "共 " + songs.length + " 首音乐";
+  const row = document.createElement("div");
+  row.className = "row" + (i===current?" current":"");
 
-  songs.forEach((song, index) => {
-    const li = document.createElement("li");
-    li.textContent = (index + 1) + ". " + song.name;
+  const name = document.createElement("div");
+  name.className = "song";
+  name.textContent = (i===current?"♫ ":"") + s.file.name;
+  name.onclick = ()=>loadSong(i,true);
 
-    if (index === current) {
-      li.classList.add("active");
-    }
+  const heart = document.createElement("button");
+  heart.textContent = s.favorite?"♥":"♡";
+  heart.className = s.favorite?"active":"";
+  heart.onclick = ()=>{
+   s.favorite = !s.favorite;
+   render();
+  };
 
-    li.onclick = () => loadSong(index, true);
-    playlist.appendChild(li);
-  });
+  const del = document.createElement("button");
+  del.textContent = "×";
+  del.setAttribute("aria-label","删除歌曲");
+  del.onclick = ()=>removeSong(i);
+
+  row.append(name,heart,del);
+  $("playlist").append(row);
+ });
 }
 
-// 加载歌曲
-function loadSong(index, autoplay) {
-  if (index < 0 || index >= songs.length) return;
+function loadSong(i,autoplay){
+ if(i<0 || i>=songs.length) return;
+ audio.pause();
+ audio.removeAttribute("src");
+ audio.load();
+ if(url) URL.revokeObjectURL(url);
 
+ current = i;
+ url = URL.createObjectURL(songs[i].file);
+ audio.src = url;
+ $("title").textContent = songs[i].file.name;
+ $("status").textContent = "本地音乐";
+ $("progress").value = 0;
+ $("elapsed").textContent = "0:00";
+ $("duration").textContent = "0:00";
+ render();
+ if(autoplay) startPlay();
+}
+
+function startPlay(){
+ audio.play().catch(()=>{
+  $("status").textContent = "无法播放，请检查文件格式";
+ });
+}
+
+function togglePlay(){
+ if(current===-1){
+  alert("请先导入音乐");
+  return;
+ }
+ if(audio.paused) startPlay();
+ else audio.pause();
+}
+
+function randomIndex(){
+ if(songs.length<2) return current;
+ let i;
+ do{
+  i=Math.floor(Math.random()*songs.length);
+ }while(i===current);
+ return i;
+}
+
+function next(){
+ if(!songs.length) return;
+ loadSong(shuffle?randomIndex():
+ (current+1)%songs.length,true);
+}
+
+function previous(){
+ if(!songs.length) return;
+ loadSong((current-1+songs.length)%songs.length,true);
+}
+
+function toggleShuffle(){
+ shuffle=!shuffle;
+ $("shuffle").classList.toggle("active",shuffle);
+ $("status").textContent=shuffle?
+ "随机播放已开启":"顺序播放";
+}
+
+function toggleRepeat(){
+ repeat=(repeat+1)%3;
+ $("repeat").classList.toggle("active",repeat!==0);
+ $("repeat").textContent=repeat===2?"↻¹":"↻";
+ $("status").textContent=
+ ["关闭循环","列表循环","单曲循环"][repeat];
+}
+
+function removeSong(i){
+ const wasPlaying=!audio.paused;
+ songs.splice(i,1);
+ if(i===current){
   audio.pause();
-
-  if (currentURL) {
-    URL.revokeObjectURL(currentURL);
+  if(songs.length){
+   loadSong(Math.min(i,songs.length-1),wasPlaying);
+  }else{
+   audio.removeAttribute("src");
+   audio.load();
+   if(url) URL.revokeObjectURL(url);
+   url=null;
+   current=-1;
+   $("title").textContent="暂无音乐";
+   $("status").textContent="导入音乐，开始聆听";
+   $("progress").value=0;
+   $("elapsed").textContent="0:00";
+   $("duration").textContent="0:00";
   }
-
-  current = index;
-  currentURL = URL.createObjectURL(songs[index]);
-  audio.src = currentURL;
-  songName.textContent = songs[index].name;
-
-  renderPlaylist();
-
-  if (autoplay) {
-    startPlay();
-  }
+ }else if(i<current){
+  current--;
+ }
+ render();
 }
 
-// 开始播放
-function startPlay() {
-  audio.play().catch(() => {
-    status.textContent = "无法播放，请检查音乐格式或文件。";
-  });
+function formatTime(t){
+ if(!Number.isFinite(t)) return "0:00";
+ return Math.floor(t/60)+":"+
+ String(Math.floor(t%60)).padStart(2,"0");
 }
 
-// 播放与暂停
-function togglePlay() {
-  if (songs.length === 0) {
-    alert("请先导入音乐");
-    return;
-  }
+audio.ontimeupdate=()=>{
+ if(Number.isFinite(audio.duration)&&audio.duration>0){
+  $("progress").value=audio.currentTime/audio.duration*100;
+  $("elapsed").textContent=formatTime(audio.currentTime);
+ }
+};
 
-  if (audio.paused) {
-    startPlay();
-  } else {
-    audio.pause();
-  }
+audio.onloadedmetadata=()=>{
+ $("duration").textContent=formatTime(audio.duration);
+};
+
+$("progress").oninput=e=>{
+ if(Number.isFinite(audio.duration)){
+  audio.currentTime=e.target.value/100*audio.duration;
+ }
+};
+
+$("volume").oninput=e=>{
+ audio.volume=Number(e.target.value);
+};
+
+function toggleMute(){
+ audio.muted=!audio.muted;
+ $("mute").textContent=audio.muted?"🔇":"🔊";
 }
 
-// 上一曲
-function previous() {
-  if (songs.length === 0) return;
-  loadSong((current - 1 + songs.length) % songs.length, true);
-}
+audio.onplay=()=>{
+ $("play").textContent="Ⅱ";
+ $("disc").classList.add("playing");
+};
 
-// 下一曲
-function next() {
-  if (songs.length === 0) return;
-  loadSong((current + 1) % songs.length, true);
-}
+audio.onpause=()=>{
+ $("play").textContent="▶";
+ $("disc").classList.remove("playing");
+};
 
-audio.addEventListener("play", () => {
-  playButton.textContent = "暂停";
-});
+audio.onended=()=>{
+ if(repeat===2){
+  audio.currentTime=0;
+  startPlay();
+ }else if(shuffle || repeat===1){
+  next();
+ }else if(current+1<songs.length){
+  loadSong(current+1,true);
+ }
+};
 
-audio.addEventListener("pause", () => {
-  playButton.textContent = "播放";
-});
+audio.onerror=()=>{
+ if(current!==-1)
+  $("status").textContent="音频读取失败或格式不受支持";
+};
 
-audio.addEventListener("ended", () => {
-  if (current + 1 < songs.length) {
-    loadSong(current + 1, true);
-  } else {
-    playButton.textContent = "播放";
-  }
-});
-
-audio.addEventListener("error", () => {
-  status.textContent = "当前音乐无法读取或格式不受支持。";
-});
+$("search").oninput=render;
 </script>
-
 </body>
 </html>
